@@ -1,0 +1,15 @@
+.dirs-column .panel-body{
+    height: 500px;
+    overflow-y: scroll;
+}
+.dirs-column table, .dirs-column table *{
+    -moz-user-select: none;
+    -o-user-select:none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+     user-select: none;
+}
+.dirs-column table tr:hover{
+    cursor: pointer;
+}

@@ -6,8 +6,10 @@
     <meta charset="UTF-8">
     <title>FTP client</title>
     <link rel="stylesheet" type="text/css" href="{% static 'ftp_client/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'ftp_client/css/style.css' %}">
     <script type="text/javascript" src="{% static 'ftp_client/js/jquery-1.11.3.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'ftp_client/js/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'ftp_client/js/main.js' %}"></script>
 </head>
 <body>
 <div class="container-fluid">
@@ -20,26 +22,51 @@
             <form class="form-inline" method="post" id="connection-form" action="{% url 'ftp_client:connect' %}">
                 {% csrf_token %}
                 {% for field in connection_form %}
-                    <div class="form-group">
-                        {{ field.errors }}
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {% if field.is_hidden %}
                         {{ field }}
-                    </div>
+                    {% else %}
+                        <div class="form-group">
+                            {{ field.errors }}
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                    {% endif %}
                 {% endfor %}
                 <button type="submit" class="btn btn-default">Connect</button>
             </form>
         </div>
     </div>
     <div class="row">
-        <div class="col-lg-6">
+        <div class="col-lg-6 dirs-column local">
             <div class="panel panel-info">
-                <div class="panel-heading">Local directory:</div>
+                <div class="panel-heading">Local directory: <span class="directory">{{ local_dir_path }}</span></div>
                 <div class="panel-body">
-                    FOLDER
+                    <table class="table table-hover">
+                        <tr>
+                            <th>File name</th>
+                            <th>Size</th>
+                            <th>Type</th>
+                        </tr>
+                        {% for item in local_dir %}
+                            <tr data-type="{{ item.type }}" data-full-path="{{ item.full_path }}">
+                                <td>
+                                    {% if item.type == 'catalog' %}
+                                        <span class="glyphicon glyphicon-folder-open"></span>
+                                    {% else %}
+                                        <span class="glyphicon glyphicon-file"></span>
+                                    {% endif %}
+                                    &nbsp;
+                                    {{ item.name }}
+                                </td>
+                                <td>{{ item.size }}</td>
+                                <td>{{ item.info }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
+        <div class="col-lg-6 dirs-column remote">
             <div class="panel panel-info">
                 <div class="panel-heading">Remote directory:</div>
                 <div class="panel-body">
