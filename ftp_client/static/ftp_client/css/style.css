@@ -13,3 +13,23 @@
 .dirs-column table tr:hover{
     cursor: pointer;
 }
+.dirs-column .tasks{
+    display: none;
+}
+.dirs-column.remote .tasks a{
+    margin: 0px 10px;
+}
+.dirs-column.remote .tasks a:hover, .dirs-column.remote .tasks a:focus, .dirs-column.remote .tasks a:active{
+    text-decoration: none;
+}
+.dirs-column.remote .progress{
+    width: 50%;
+    margin: 165px auto 0 auto;
+    display: none;
+}
+.dirs-column.remote .progress .progress-bar{
+    width: 100%;
+}
+.dirs-column .alerts{
+    display: none;
+}

@@ -38,8 +38,23 @@
     </div>
     <div class="row">
         <div class="col-lg-6 dirs-column local">
+            <div class="alerts">
+                <div class="alert alert-danger" role="alert">
+                    <button class="close" aria-label="Close">
+                        <span>&times;</span>
+                    </button>
+                    <strong></strong>
+                </div>
+            </div>
             <div class="panel panel-info">
-                <div class="panel-heading">Local directory: <span class="directory">{{ local_dir_path }}</span></div>
+                <div class="panel-heading">
+                    Local directory: <span class="directory">{{ local_dir_path }}</span>
+                    <div class="tasks pull-right">
+                        <a id="upload" href="#" title="Upload to server">
+                            <span class="glyphicon glyphicon-upload"></span>
+                        </a>
+                    </div>
+                </div>
                 <div class="panel-body">
                     <table class="table table-hover">
                         <tr>
@@ -51,12 +66,10 @@
                             <tr data-type="{{ item.type }}" data-full-path="{{ item.full_path }}">
                                 <td>
                                     {% if item.type == 'catalog' %}
-                                        <span class="glyphicon glyphicon-folder-open"></span>
+                                        <span class="glyphicon glyphicon-folder-close"></span>
                                     {% else %}
                                         <span class="glyphicon glyphicon-file"></span>
-                                    {% endif %}
-                                    &nbsp;
-                                    {{ item.name }}
+                                    {% endif %}&nbsp;&nbsp;{{ item.name }}
                                 </td>
                                 <td>{{ item.size }}</td>
                                 <td>{{ item.info }}</td>
@@ -67,10 +80,48 @@
             </div>
         </div>
         <div class="col-lg-6 dirs-column remote">
+            <div class="alerts">
+                <div class="alert alert-danger" role="alert">
+                    <button class="close" aria-label="Close">
+                        <span >&times;</span>
+                    </button>
+                    <strong></strong>
+                </div>
+            </div>
             <div class="panel panel-info">
-                <div class="panel-heading">Remote directory:</div>
+                <div class="panel-heading">
+                    Remote directory: <span class="directory"></span>
+
+                    <div class="tasks pull-right">
+                        <a data-toggle="modal" data-target="#modal-mkdir" id="mkdir" href="#" title="Create folder">
+                            <span class="glyphicon glyphicon-folder-open"></span>
+                        </a>
+                        <a href="#" id="rename" title="rename">
+                            <span class="glyphicon glyphicon-pencil"></span>
+                        </a>
+                        <a href="#" id="chmod" title="change permissions">
+                            <span class="glyphicon glyphicon-cog"></span>
+                        </a>
+                        <a href="#" id="download" title="Download from server">
+                            <span class="glyphicon glyphicon-download-alt"></span>
+                        </a>
+                        <a href="#" id="remove" title="Remove">
+                            <span class="glyphicon glyphicon-trash"></span>
+                        </a>
+                    </div>
+                </div>
                 <div class="panel-body">
-                    FOLDER
+                    <table class="table table-hover">
+                        <tr>
+                            <th>File name</th>
+                            <th>Size</th>
+                            <th>Type</th>
+                            <th>Permission</th>
+                        </tr>
+                    </table>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped active" role="progressbar"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -83,6 +134,97 @@
                     SOME CONTENT
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modal-mkdir" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form class="form-inline" id="tasks-mkdir" method="post">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Create folder</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="tasks-mkdir-name">New folder name:</label>
+                        <input type="text" name="tasks-mkdir-name" id="tasks-mkdir-name" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <input type="submit" value="Create folder" class="btn btn-primary">
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modal-rename" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form class="form-inline" id="tasks-rename" method="post">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Rename</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="tasks-rename-name">New name:</label>
+                        <input type="text" name="tasks-rename-name" id="tasks-rename-name" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <input type="submit" value="Rename" class="btn btn-primary">
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modal-chmod" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form class="form-inline" id="tasks-chmod" method="post">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Change permission</h4>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered">
+                        <tr>
+                            <td></td>
+                            <td>Read</td>
+                            <td>Write</td>
+                            <td>Execute</td>
+                        </tr>
+                        <tr>
+                            <td>Owner</td>
+                            <td><input type="checkbox" name="owner" value="4"></td>
+                            <td><input type="checkbox" name="owner" value="2"></td>
+                            <td><input type="checkbox" name="owner" value="1"></td>
+                        </tr>
+                        <tr>
+                            <td>Group</td>
+                            <td><input type="checkbox" name="group" value="4"></td>
+                            <td><input type="checkbox" name="group" value="2"></td>
+                            <td><input type="checkbox" name="group" value="1"></td>
+                        </tr>
+                        <tr>
+                            <td>Other</td>
+                            <td><input type="checkbox" name="other" value="4"></td>
+                            <td><input type="checkbox" name="other" value="2"></td>
+                            <td><input type="checkbox" name="other" value="1"></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <input type="submit" value="Change" class="btn btn-primary">
+                </div>
+            </form>
         </div>
     </div>
 </div>
