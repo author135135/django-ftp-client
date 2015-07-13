@@ -44,6 +44,7 @@
             $(this).toggleClass('info');
         });
 
+        //Tasks: change directory
         $(document).on('dblclick', '.dirs-column table tr:not(:nth-child(1))', function (e) {
             var table = $(this).parents('table'),
                 type = $(this).parents('.dirs-column').attr('class').replace(/.+[^(local|remote)]/g, '');
@@ -52,94 +53,65 @@
                 return false;
             }
 
-            $.post('/ftp-client/change-dir/', {
-                'dir': $(this).attr('data-full-path'),
-                'type': type
+            $.post('/ftp-client/tasks/', {
+                type: type,
+                task: 'change_dir',
+                dir: $(this).attr('data-full-path')
             }, function (response) {
                 fill_table(type, response['dir_content'], response['cur_dir']);
             }, 'json');
         });
 
-        $('.dirs-column.remote .tasks a').click(function (e) {
-            e.preventDefault();
-
-            switch ($(this).attr('id')) {
-                case 'mkdir':
-                    //console.log('mkdir');
-                    break;
-                default :
-                    //console.log('undefined command');
-            }
-        });
-
-        //Tasks: upload to server
-        $('.local .tasks #upload').click(function(e){
-            e.preventDefault();
-
-            var items = $('.local table tr.info');
-
-            if(!items.length){
-                $('.local .alerts .alert strong').text('Select items before upload');
-                $('.local .alerts').show();
-                return false;
-            }
-
-            var path = [];
-
-            items.each(function(k, obj){
-                path.push($(this).attr('data-full-path'));
-            });
-
-            var request_data = {
-                'task': 'upload',
-                'items[]': path
-            };
-
-            $.post('/ftp-client/tasks/', request_data, function(response){
-                if(response['upload']){
-                    fill_table('remote', response['upload']);
-                }
-            }, 'json');
-        });
-
         //Tasks: make directory
-        $('#tasks-mkdir').submit(function (e) {
+        $('.tasks .mkdir').click(function (e) {
             e.preventDefault();
-            $('.has-error', $(this)).removeClass('has-error');
+            var request = {},
+                type = $(this).parents('.dirs-column').attr('class').replace(/.+[^(local|remote)]/g, '');
 
-            if (!$('#tasks-mkdir-name', $(this)).val()) {
-                $('#tasks-mkdir-name', $(this)).parent().addClass('has-error');
-                return false;
-            }
+            $('#modal-mkdir').modal();
 
-            var request_data = {
-                'task': 'mkdir',
-                'dirname': $('#tasks-mkdir-name', $(this)).val()
-            };
+            $('#tasks-mkdir').off('submit').on('submit', '', function (e) {
+                e.preventDefault();
+                $('.has-error', $(this)).removeClass('has-error');
 
-            $.post('/ftp-client/tasks/', request_data, function (response) {
-                if(response['mkdir']){
-                    $('#modal-mkdir').modal('hide');
-                    fill_table('remote', response['mkdir']);
+                if (!$('#tasks-mkdir-name', $(this)).val()) {
+                    $('#tasks-mkdir-name', $(this)).parent().addClass('has-error');
+                    return false;
                 }
-            }, 'json');
+
+                request = {
+                    type: type,
+                    task: 'mkdir',
+                    dirname: $('#tasks-mkdir-name', $(this)).val()
+                };
+
+                $.post('/ftp-client/tasks/', request, function (response) {
+                    if (response['dir_content']) {
+                        $('#modal-mkdir').modal('hide');
+                        fill_table(type, response['dir_content']);
+                        $('#tasks-mkdir').trigger('reset');
+                    }
+                }, 'json');
+            });
         });
 
         //Tasks: rename items
-        $('.remote .tasks #rename').click(function(e){
+        $('.tasks .rename').click(function (e) {
             e.preventDefault();
-            $('.remote .alerts').hide();
-            $('.remote .alerts .alert strong').text('');
+            var wrapper = $(this).parents('.dirs-column'),
+                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                item = $('table tr.info', wrapper);
 
-            var item = $('.remote table tr.info');
+            $('.alerts', wrapper).hide();
+            $('.alerts .alert strong', wrapper).text('');
 
-            if(!item.length){
-                $('.remote .alerts .alert strong').text('Select item before rename');
-                $('.remote .alerts').show();
+            if (!item.length) {
+                $('.alerts .alert strong', wrapper).text('Select item before rename');
+                $('.alerts', wrapper).show();
                 return false;
-            }else if(item.length > 1){
-                $('.remote .alerts .alert strong').text('Select ONLY one item before rename');
-                $('.remote .alerts').show();
+            } else if (item.length > 1) {
+                $('.alerts .alert strong', wrapper).text('Select ONLY one item before rename');
+                $('.alerts', wrapper).show();
                 return false;
             }
 
@@ -154,45 +126,49 @@
                     return false;
                 }
 
-                var request_data = {
-                    'task': 'rename',
-                    'item': item.attr('data-full-path'),
-                    'new_item_name': $('#tasks-rename-name', $(this)).val()
+                var request = {
+                    type: type,
+                    task: 'rename',
+                    item: item.attr('data-full-path'),
+                    new_item_name: $('#tasks-rename-name', $(this)).val()
                 };
 
-                $.post('/ftp-client/tasks/', request_data, function (response) {
-                    if(response['rename']){
+                $.post('/ftp-client/tasks/', request, function (response) {
+                    if (response['dir_content']) {
                         $('#modal-rename').modal('hide');
-                        fill_table('remote', response['rename']);
+                        fill_table(type, response['dir_content']);
+                        $('#tasks-rename').trigger('reset');
                     }
                 }, 'json');
             });
         });
 
         //Tasks: change permissions
-        $('.remote .tasks #chmod').click(function(e){
+        $('.tasks .chmod').click(function (e) {
             e.preventDefault();
-            $('.remote .alerts').hide();
-            $('.remote .alerts .alert strong').text('');
+            var wrapper = $(this).parents('.dirs-column'),
+                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                items = $('table tr.info', wrapper);
 
-            var items = $('.remote table tr.info');
+            $('.alerts', wrapper).hide();
+            $('.alerts .alert strong', wrapper).text('');
 
-            if(!items.length){
-                $('.remote .alerts .alert strong').text('Select items before change permissions');
-                $('.remote .alerts').show();
+            if (!items.length) {
+                $('.alerts .alert strong', wrapper).text('Select items before change permissions');
+                $('.alerts', wrapper).show();
                 return false;
             }
 
             var path = [];
 
-            items.each(function(k, obj){
-                path.push($(this).attr('data-type') + '@' + $(this).attr('data-full-path'));
+            items.each(function (k, obj) {
+                path.push($(this).attr('data-full-path'));
             });
 
-            var request_data = {
-                'task': 'chmod',
-                'items[]': path,
-                'permission': ''
+            var request = {
+                type: type,
+                task: 'chmod',
+                'items[]': path
             };
 
             $('#modal-chmod').modal();
@@ -203,7 +179,7 @@
 
                 var form = $(this);
 
-                if(!$('input[type="checkbox"]:checked', form).length){
+                if (!$('input[type="checkbox"]:checked', form).length) {
                     return false;
                 }
 
@@ -211,74 +187,87 @@
                     group = 0,
                     other = 0;
 
-                $('input[name="owner"]:checked', form).each(function(){
+                $('input[name="owner"]:checked', form).each(function () {
                     owner += parseInt($(this).val());
                 });
 
-                $('input[name="group"]:checked', form).each(function(){
+                $('input[name="group"]:checked', form).each(function () {
                     group += parseInt($(this).val());
                 });
 
-                $('input[name="other"]:checked', form).each(function(){
+                $('input[name="other"]:checked', form).each(function () {
                     other += parseInt($(this).val());
                 });
 
-                request_data['permission'] = String(owner) + String(group) + String(other);
+                request['permission'] = String(owner) + String(group) + String(other);
 
-                $.post('/ftp-client/tasks/', request_data, function (response) {
-                    if(response['chmod']){
+                $.post('/ftp-client/tasks/', request, function (response) {
+                    if (response['dir_content']) {
                         $('#modal-chmod').modal('hide');
-                        fill_table('remote', response['chmod']);
+                        fill_table(type, response['dir_content']);
+                        $('#tasks-chmod input[type="checkbox"]').prop('checked', false);
                     }
                 }, 'json');
             });
         });
 
-        //Tasks: download from server
-        $('.remote .tasks #download').click(function(e){
+        //Tasks: upload to server
+        $('.tasks .upload').click(function (e) {
             e.preventDefault();
-            $('.remote .alerts').hide();
-            $('.remote .alerts .alert strong').text('');
-
-            var items = $('.remote table tr.info');
+            var wrapper = $(this).parents('.dirs-column'),
+                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                items = $('table tr.info', wrapper);
 
             if(!items.length){
-                $('.remote .alerts .alert strong').text('Select items before download');
-                $('.remote .alerts').show();
+                if (type == 'local') {
+                    $('.local .alerts .alert strong').text('Select items before upload');
+                } else {
+                    $('.local .alerts .alert strong').text('Select items before download');
+                }
+                $('.local .alerts').show();
                 return false;
             }
 
             var path = [];
 
             items.each(function(k, obj){
-                path.push($(this).attr('data-type') + '@' + $(this).attr('data-full-path'));
+                if (type == 'local') {
+                    path.push($(this).attr('data-full-path'));
+                } else {
+                    path.push($(this).attr('data-type') + '@' + $(this).attr('data-full-path'));
+                }
             });
 
-            var request_data = {
-                'task': 'download',
-                'cur_dir': $('.dirs-column.local .panel-heading .directory').text(),
+            var request = {
+                type: type,
+                task: 'upload',
                 'items[]': path
             };
 
-
-            $.post('/ftp-client/tasks/', request_data, function (response) {
-                if(response['download']) {
-                    fill_table('local', response['download']);
+            $.post('/ftp-client/tasks/', request, function (response) {
+                if (response['dir_content']) {
+                    if (type == 'local') {
+                        fill_table('remote', response['dir_content']);
+                    } else {
+                        fill_table('local', response['dir_content']);
+                    }
                 }
             }, 'json');
-        })
+        });
 
         //Tasks: remove directory/file
-        $('.remote .tasks #remove').click(function(e){
+        $('.tasks .remove').click(function (e) {
             e.preventDefault();
-            $('.remote .alerts').hide();
-            $('.remote .alerts .alert strong').text('');
+            var wrapper = $(this).parents('.dirs-column'),
+                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                items = $('table tr.info', wrapper);
 
-            var items = $('.remote table tr.info');
+            $('.alerts', wrapper).hide();
+            $('.alerts .alert strong', wrapper).text('');
 
             if(!items.length){
-                $('.remote .alerts .alert strong').text('Select items before delete');
-                $('.remote .alerts').show();
+                $('.alerts .alert strong', wrapper).text('Select items before delete');
+                $('.alerts', wrapper).show();
                 return false;
             }
 
@@ -288,15 +277,16 @@
                 path.push($(this).attr('data-type') + '@' + $(this).attr('data-full-path'));
             });
 
-            var request_data = {
-                'task': 'remove',
+            var request = {
+                type: type,
+                task: 'remove',
                 'items[]': path
             };
 
 
-            $.post('/ftp-client/tasks/', request_data, function (response) {
-                if(response['remove']) {
-                    fill_table('remote', response['remove']);
+            $.post('/ftp-client/tasks/', request, function (response) {
+                if (response['dir_content']) {
+                    fill_table(type, response['dir_content']);
                 }
             }, 'json');
         });
@@ -315,10 +305,7 @@
                 html += '</td>';
                 html += '<td>' + item.size + '</td>';
                 html += '<td>' + item.info + '</td>';
-
-                if (type == 'remote') {
-                    html += '<td>' + item.perms + '</td>';
-                }
+                html += '<td>' + item.perms + '</td>';
 
                 html += '</tr>';
             });

@@ -13,13 +13,16 @@
 .dirs-column table tr:hover{
     cursor: pointer;
 }
-.dirs-column .tasks{
+
+.dirs-column.remote .tasks {
     display: none;
 }
-.dirs-column.remote .tasks a{
+
+.dirs-column .tasks a {
     margin: 0px 10px;
 }
-.dirs-column.remote .tasks a:hover, .dirs-column.remote .tasks a:focus, .dirs-column.remote .tasks a:active{
+
+.dirs-column .tasks a:hover, .dirs-column .tasks a:focus, .dirs-column .tasks a:active {
     text-decoration: none;
 }
 .dirs-column.remote .progress{

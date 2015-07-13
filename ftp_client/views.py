@@ -1,5 +1,6 @@
 import os
 import ftplib
+import stat
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseForbidden
 from ftp_client.forms import ConnectionForm
@@ -12,12 +13,12 @@ TEST_PASSWD = 'yexVV0tMFs'
 
 def index(request):
     connection_form = ConnectionForm()
-    local_dir_path = os.getcwd()
+    manager = FtpClientLocalManager()
 
     return render(request, template_name='ftp_client/index.html', context={
         'connection_form': connection_form,
-        'local_dir': get_dir(local_dir_path),
-        'local_dir_path': local_dir_path,
+        'local_dir': manager.get_dir_content(),
+        'local_dir_path': manager.get_dir(),
     })
 
 
@@ -26,6 +27,7 @@ def connect(request):
         return HttpResponseForbidden('403 Access denied')
 
     connection_form = ConnectionForm(request.POST)
+    manager = FtpClientRemoteManager()
 
     response = {
         'errors': None,
@@ -46,75 +48,16 @@ def connect(request):
         else:
             response['errors'] = connection_form.errors
         """
-        connection = FtpClientManager()
-        connection.add_connection(TEST_HOST, TEST_USER, TEST_PASSWD)
+        manager.add_connection(TEST_HOST, TEST_USER, TEST_PASSWD)
         response['success'] = True
-        response['remote_dir_content'] = connection.get_dir()
-        response['remote_dir_path'] = connection.get_connection().pwd()
+        response['remote_dir_content'] = manager.get_dir_content()
+        response['remote_dir_path'] = manager.get_connection().pwd()
 
     elif request.POST['connect_type'] == 'disconnect':
-        FtpClientManager().close_connection()
+        manager.close_connection()
         response['disconnect'] = True
 
     return HttpResponse(JSONEncoder().encode(response))
-
-
-def change_dir(request):
-    if 'dir' not in request.POST:
-        return HttpResponseForbidden('403 Access denied')
-
-    response = {
-        'cur_dir': request.POST['dir'],
-        'dir_content': None,
-    }
-
-    if request.POST['type'] == 'local':
-        os.chdir(request.POST['dir'])
-        response['dir_content'] = get_dir(request.POST['dir'])
-    elif request.POST['type'] == 'remote':
-        response['dir_content'] = FtpClientManager().change_dir(request.POST['dir'])
-
-    return HttpResponse(JSONEncoder().encode(response))
-
-
-def get_dir(path):
-    dir_content = list()
-    output = list()
-
-    if os.path.exists(path) and os.path.isdir(path):
-        dir_content = os.listdir(path)
-
-    for item in dir_content:
-        item_path = os.path.join(path, item)
-        item_info = {
-            'name': item,
-            'info': '',
-            'size': os.path.getsize(item_path),
-            'type': '',
-            'full_path': item_path,
-        }
-
-        if os.path.isdir(item_path):
-            item_info['info'] = 'Catalog'
-            item_info['type'] = 'catalog'
-        else:
-            item_ext = os.path.splitext(item_path)
-            item_info['info'] = '%s-file' % item_ext[1] if len(item_ext) > 1 and item_ext[1] else 'File'
-            item_info['type'] = 'file'
-
-        output.append(item_info)
-
-    output.sort(key=lambda i: i['name'] and i['type'])
-    output.insert(0, {
-        'name': '..',
-        'info': '',
-        'size': '',
-        'type': 'catalog',
-        'full_path': os.path.dirname(path),
-    })
-
-    return output
-
 
 def tasks(request):
     if 'task' not in request.POST:
@@ -122,21 +65,33 @@ def tasks(request):
 
     response = dict()
 
-    if request.POST['task'] == 'mkdir':
-        response['mkdir'] = FtpClientManager().mkdir('./%s' % request.POST['dirname'])
-    elif request.POST['task'] == 'remove':
-        response['remove'] = FtpClientManager().remove_items(request.POST.getlist('items[]'))
+    if request.POST['type'] == 'remote':
+        manager = FtpClientRemoteManager()
+    else:
+        manager = FtpClientLocalManager()
+
+    if request.POST['task'] == 'change_dir':
+        manager.set_dir(request.POST['dir'])
+        response['cur_dir'] = manager.get_dir()
+    elif request.POST['task'] == 'mkdir':
+        manager.mkdir(request.POST['dirname'])
     elif request.POST['task'] == 'rename':
-        response['rename'] = FtpClientManager().rename_item(request.POST['item'], request.POST['new_item_name'])
+        manager.rename_item(request.POST['item'], request.POST['new_item_name'])
     elif request.POST['task'] == 'chmod':
-        response['chmod'] = FtpClientManager().chmod_items(request.POST.getlist('items[]'), request.POST['permission'])
+        manager.chmod_items(request.POST.getlist('items[]'), request.POST['permission'])
     elif request.POST['task'] == 'upload':
-        response['upload'] = FtpClientManager().upload_items(request.POST.getlist('items[]'))
-    elif request.POST['task'] == 'download':
-        if FtpClientManager().download_items(request.POST['cur_dir'], request.POST.getlist('items[]')):
-            response['download'] = get_dir(os.getcwd())
+        remote_manager = FtpClientRemoteManager()
+        if request.POST['type'] == 'remote':
+            remote_manager.download_items(FtpClientLocalManager().get_dir(), request.POST.getlist('items[]'))
+            response['dir_content'] = FtpClientLocalManager().get_dir_content()
         else:
-            response['download'] = False
+            remote_manager.upload_items(request.POST.getlist('items[]'))
+            response['dir_content'] = remote_manager.get_dir_content()
+    elif request.POST['task'] == 'remove':
+        manager.remove_items(request.POST.getlist('items[]'))
+
+    if 'dir_content' not in response:
+        response['dir_content'] = manager.get_dir_content()
 
     return HttpResponse(JSONEncoder().encode(response))
 
@@ -147,13 +102,108 @@ def connection_status(func):
             args[0].get_connection().voidcmd("NOOP")
         except IOError:
             args[0].reconnect()
-
         return func(*args, **kwargs)
-
     return check_connection
 
 
-class FtpClientManager(object):
+class FtpClientLocalManager(object):
+    _dir = None
+
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(FtpClientLocalManager, cls).__new__(cls)
+            cls.instance._dir = os.getcwd()
+        return cls.instance
+
+    def get_dir(self):
+        return self._dir
+
+    def set_dir(self, path):
+        self._dir = path
+        return True
+
+    def mkdir(self, path):
+        dir_full_path = os.path.join(self._dir, path)
+        if not os.access(self._dir, os.W_OK) or os.path.exists(dir_full_path):
+            return False
+
+        os.mkdir(dir_full_path)
+        return True
+
+    def rename_item(self, item_name, new_item_name):
+        try:
+            os.rename(item_name, os.path.join(self._dir, new_item_name))
+        except OSError:
+            return False
+        return True
+
+    def chmod_items(self, items, permission):
+        permission = int(permission, 8)
+        for item in items:
+            os.chmod(item, permission)
+        return True
+
+    def remove_dir(self, dirname):
+        items = os.listdir(dirname)
+        for item in items:
+            item_path = os.path.join(dirname, item)
+            if os.path.isfile(item_path):
+                os.remove(item_path)
+            else:
+                self.remove_dir(item_path)
+        os.rmdir(dirname)
+        return True
+
+    def remove_items(self, items):
+        for item in items:
+            item_type, item_path = item.split('@')
+            if item_type == 'file':
+                os.remove(item_path)
+            else:
+                self.remove_dir(item_path)
+        return True
+
+    def get_dir_content(self):
+        dir_content = list()
+        output = list()
+
+        if os.path.exists(self._dir) and os.path.isdir(self._dir):
+            dir_content = os.listdir(self._dir)
+
+        for item in dir_content:
+            item_path = os.path.join(self._dir, item)
+            item_info = {
+                'name': item,
+                'info': '',
+                'size': os.path.getsize(item_path),
+                'perms': oct(stat.S_IMODE(os.stat(item_path).st_mode)),
+                'type': '',
+                'full_path': item_path,
+            }
+
+            if os.path.isdir(item_path):
+                item_info['info'] = 'Catalog'
+                item_info['type'] = 'catalog'
+            else:
+                item_ext = os.path.splitext(item_path)
+                item_info['info'] = '%s-file' % item_ext[1] if len(item_ext) > 1 and item_ext[1] else 'File'
+                item_info['type'] = 'file'
+
+            output.append(item_info)
+
+        output.sort(key=lambda i: i['name'] and i['type'])
+        output.insert(0, {
+            'name': '..',
+            'info': '',
+            'size': '',
+            'perms': '',
+            'type': 'catalog',
+            'full_path': os.path.dirname(self._dir),
+        })
+        return output
+
+
+class FtpClientRemoteManager(object):
     host = None
     user = None
     password = None
@@ -161,8 +211,7 @@ class FtpClientManager(object):
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, 'instance'):
-            cls.instance = super(FtpClientManager, cls).__new__(cls)
-
+            cls.instance = super(FtpClientRemoteManager, cls).__new__(cls)
         return cls.instance
 
     def add_connection(self, host, user, password):
@@ -223,19 +272,22 @@ class FtpClientManager(object):
             self._connection.rmd(dirname)
         except ftplib.Error:
             return False
-
         return True
 
     @connection_status
-    def change_dir(self, path):
+    def get_dir(self):
+        return self._connection.pwd()
+
+    @connection_status
+    def set_dir(self, path):
         try:
             self._connection.cwd(path)
         except ftplib.Error:
             return False
-        return self.get_dir()
+        return True
 
     @connection_status
-    def get_dir(self):
+    def get_dir_content(self):
         dir_content = list()
         output = list()
 
@@ -262,23 +314,25 @@ class FtpClientManager(object):
                 'full_path': None
             }
 
-            if items['filename'] == '..':
+            if items['filename'] in ['.', '..']:
                 item_info['full_path'] = os.path.dirname(self._connection.pwd())
+                item_info['type'] = 'catalog'
+                item_info['size'] = ''
+                item_info['perms'] = ''
             else:
                 item_info['full_path'] = os.path.join(self._connection.pwd(), items['filename'])
 
-            if items['type'] in ['cdir', 'pdir', 'dir']:
-                item_info['info'] = 'Catalog'
-                item_info['type'] = 'catalog'
-            else:
-                item_ext = os.path.splitext(items['filename'])
-                item_info['info'] = '%s-file' % item_ext[1] if len(item_ext) > 1 and item_ext[1] else 'File'
-                item_info['type'] = 'file'
+                if items['type'] == 'dir':
+                    item_info['info'] = 'Catalog'
+                    item_info['type'] = 'catalog'
+                else:
+                    item_ext = os.path.splitext(items['filename'])
+                    item_info['info'] = '%s-file' % item_ext[1] if len(item_ext) > 1 and item_ext[1] else 'File'
+                    item_info['type'] = 'file'
 
             output.append(item_info)
 
         output.sort(key=lambda i: i['name'] and i['type'])
-
         return output
 
     @connection_status
@@ -287,8 +341,7 @@ class FtpClientManager(object):
             self._connection.mkd(path)
         except ftplib.Error:
             return False
-
-        return self.get_dir()
+        return True
 
     @connection_status
     def remove_items(self, items):
@@ -301,8 +354,7 @@ class FtpClientManager(object):
                     self.remove_dir(item_path)
         except ftplib.Error:
             return False
-
-        return self.get_dir()
+        return True
 
     @connection_status
     def rename_item(self, item_name, new_item_name):
@@ -311,8 +363,7 @@ class FtpClientManager(object):
             self._connection.rename(item_name, new_item_name)
         except ftplib.Error:
             return False
-
-        return self.get_dir()
+        return True
 
     @connection_status
     def chmod_items(self, items, permission):

@@ -5,6 +5,5 @@ from django.views.decorators.csrf import csrf_exempt
 urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'^connect/$', views.connect, name='connect'),
-    url(r'^change-dir/$', csrf_exempt(views.change_dir), name='change_dir'),
     url(r'^tasks/$', csrf_exempt(views.tasks), name='tasks')
 ]

@@ -50,8 +50,20 @@
                 <div class="panel-heading">
                     Local directory: <span class="directory">{{ local_dir_path }}</span>
                     <div class="tasks pull-right">
-                        <a id="upload" href="#" title="Upload to server">
+                        <a class="mkdir" href="#" title="Create folder">
+                            <span class="glyphicon glyphicon-folder-open"></span>
+                        </a>
+                        <a class="rename" href="#" title="rename">
+                            <span class="glyphicon glyphicon-pencil"></span>
+                        </a>
+                        <a class="chmod" href="#" title="change permissions">
+                            <span class="glyphicon glyphicon-cog"></span>
+                        </a>
+                        <a class="upload" href="#" title="Upload to server">
                             <span class="glyphicon glyphicon-upload"></span>
+                        </a>
+                        <a class="remove" href="#" title="Remove">
+                            <span class="glyphicon glyphicon-trash"></span>
                         </a>
                     </div>
                 </div>
@@ -61,6 +73,7 @@
                             <th>File name</th>
                             <th>Size</th>
                             <th>Type</th>
+                            <th>Permission</th>
                         </tr>
                         {% for item in local_dir %}
                             <tr data-type="{{ item.type }}" data-full-path="{{ item.full_path }}">
@@ -73,6 +86,7 @@
                                 </td>
                                 <td>{{ item.size }}</td>
                                 <td>{{ item.info }}</td>
+                                <td>{{ item.perms }}</td>
                             </tr>
                         {% endfor %}
                     </table>
@@ -93,19 +107,19 @@
                     Remote directory: <span class="directory"></span>
 
                     <div class="tasks pull-right">
-                        <a data-toggle="modal" data-target="#modal-mkdir" id="mkdir" href="#" title="Create folder">
+                        <a class="mkdir" href="#" title="Create folder">
                             <span class="glyphicon glyphicon-folder-open"></span>
                         </a>
-                        <a href="#" id="rename" title="rename">
+                        <a class="rename" href="#" title="rename">
                             <span class="glyphicon glyphicon-pencil"></span>
                         </a>
-                        <a href="#" id="chmod" title="change permissions">
+                        <a class="chmod" href="#" title="change permissions">
                             <span class="glyphicon glyphicon-cog"></span>
                         </a>
-                        <a href="#" id="download" title="Download from server">
+                        <a class="upload" href="#" title="Download from server">
                             <span class="glyphicon glyphicon-download-alt"></span>
                         </a>
-                        <a href="#" id="remove" title="Remove">
+                        <a class="remove" href="#" title="Remove">
                             <span class="glyphicon glyphicon-trash"></span>
                         </a>
                     </div>
