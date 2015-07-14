@@ -6,10 +6,6 @@ from django.http import HttpResponse, HttpResponseForbidden
 from ftp_client.forms import ConnectionForm
 from json import JSONEncoder
 
-TEST_HOST = 'server31.hostinger.com.ua'
-TEST_USER = 'u647135054'
-TEST_PASSWD = 'yexVV0tMFs'
-
 
 def index(request):
     connection_form = ConnectionForm()
@@ -38,26 +34,20 @@ def connect(request):
     }
 
     if request.POST['connect_type'] == 'connect':
-        """
         if connection_form.is_valid():
-            # connection = FTP(connection_form.cleaned_data['host'], connection_form.cleaned_data['login'],
-            #                 connection_form.cleaned_data['password'])
-            return HttpResponse()
-
+            manager.add_connection(TEST_HOST, TEST_USER, TEST_PASSWD)
+            response['remote_dir_content'] = manager.get_dir_content()
+            response['remote_dir_path'] = manager.get_connection().pwd()
             response['success'] = True
         else:
             response['errors'] = connection_form.errors
-        """
-        manager.add_connection(TEST_HOST, TEST_USER, TEST_PASSWD)
-        response['success'] = True
-        response['remote_dir_content'] = manager.get_dir_content()
-        response['remote_dir_path'] = manager.get_connection().pwd()
 
     elif request.POST['connect_type'] == 'disconnect':
         manager.close_connection()
         response['disconnect'] = True
 
     return HttpResponse(JSONEncoder().encode(response))
+
 
 def tasks(request):
     if 'task' not in request.POST:
@@ -103,6 +93,7 @@ def connection_status(func):
         except IOError:
             args[0].reconnect()
         return func(*args, **kwargs)
+
     return check_connection
 
 
