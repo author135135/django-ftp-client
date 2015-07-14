@@ -1,21 +1,36 @@
-.dirs-column .panel-body{
-    height: 500px;
+.dirs-column .panel-body {
+    height: 600px;
     overflow-y: scroll;
+    position: relative;
 }
-.dirs-column table, .dirs-column table *{
+
+.dirs-column table, .dirs-column table * {
     -moz-user-select: none;
-    -o-user-select:none;
+    -o-user-select: none;
     -khtml-user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
-     user-select: none;
+    user-select: none;
 }
-.dirs-column table tr:hover{
+
+.dirs-column table tr:hover {
     cursor: pointer;
 }
 
-.dirs-column.remote .tasks {
+.dirs-column.remote .tasks, .dirs-column.local a.upload {
     display: none;
+}
+
+.dirs-column.active .tasks {
+    display: block;
+}
+
+.dirs-column.active.local a.upload {
+    display: inline;
+}
+
+.dirs-column .tasks {
+    position: relative;
 }
 
 .dirs-column .tasks a {
@@ -25,14 +40,47 @@
 .dirs-column .tasks a:hover, .dirs-column .tasks a:focus, .dirs-column .tasks a:active {
     text-decoration: none;
 }
-.dirs-column.remote .progress{
-    width: 50%;
-    margin: 165px auto 0 auto;
+
+.dirs-column .tasks .tasks-disable {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background: rgba(217, 237, 247, 0.5);
+    top: 0px;
+    left: 0px;
+    z-index: 99;
     display: none;
 }
-.dirs-column.remote .progress .progress-bar{
+
+.dirs-column .progress-wrapper {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 99;
+    top: 0px;
+    left: 0px;
+    background: rgba(255, 255, 255, 0.5);
+    display: none;
+}
+
+.dirs-column .progress-wrapper .progress {
+    margin: 32.5% auto 0px auto;
+    width: 60%;
+}
+
+.dirs-column .progress-wrapper .progress-bar {
     width: 100%;
 }
-.dirs-column .alerts{
+
+.dirs-column.in-progress .panel-body{
+    overflow: hidden;
+    padding-right: 30px;
+}
+
+.dirs-column.in-progress .progress-wrapper, .dirs-column.in-progress .tasks .tasks-disable {
+    display: block;
+}
+
+.dirs-column .alerts {
     display: none;
 }

@@ -10,9 +10,9 @@
             e.preventDefault();
             var form = $(this);
             $('.has-error', form).removeClass('has-error');
-            $('.dirs-column.remote .progress').show();
+            progress('remote', true);
             $.post(form.attr('action'), form.serialize(), function (response) {
-                $('.dirs-column.remote .progress').hide();
+                progress('remote', false);
                 if (response['errors']) {
                     $.each(response['errors'], function (k, obj) {
                         $('#id_' + k, form).parent().addClass('has-error');
@@ -23,7 +23,7 @@
                     form.parent().parent().removeClass('panel-primary').addClass('panel-success');
                     $('button', form).text('Disconnect').removeClass('btn-default').addClass('btn-danger');
                     $('#id_connect_type', form).val('disconnect');
-                    $('.dirs-column .tasks').show();
+                    $('.dirs-column').addClass('active');
 
                     fill_table('remote', response['remote_dir_content'], response['remote_dir_path']);
 
@@ -34,7 +34,7 @@
                     form.trigger('reset');
                     $('.dirs-column.remote table tr:not(:first)').remove();
                     $('.dirs-column.remote .panel-heading span').text('');
-                    $('.dirs-column.remote .tasks').hide();
+                    $('.dirs-column.active').removeClass('active');
                 }
             }, 'json');
         });
@@ -47,17 +47,19 @@
         //Tasks: change directory
         $(document).on('dblclick', '.dirs-column table tr:not(:nth-child(1))', function (e) {
             var table = $(this).parents('table'),
-                type = $(this).parents('.dirs-column').attr('class').replace(/.+[^(local|remote)]/g, '');
+                type = $(this).parents('.dirs-column').attr('data-type');
 
             if ($(this).attr('data-type') == 'file') {
                 return false;
             }
 
+            progress(type, true);
             $.post('/ftp-client/tasks/', {
                 type: type,
                 task: 'change_dir',
                 dir: $(this).attr('data-full-path')
             }, function (response) {
+                progress(type, false);
                 fill_table(type, response['dir_content'], response['cur_dir']);
             }, 'json');
         });
@@ -66,7 +68,7 @@
         $('.tasks .mkdir').click(function (e) {
             e.preventDefault();
             var request = {},
-                type = $(this).parents('.dirs-column').attr('class').replace(/.+[^(local|remote)]/g, '');
+                type = $(this).parents('.dirs-column').attr('data-type');
 
             $('#modal-mkdir').modal();
 
@@ -85,7 +87,9 @@
                     dirname: $('#tasks-mkdir-name', $(this)).val()
                 };
 
+                progress(type, true);
                 $.post('/ftp-client/tasks/', request, function (response) {
+                    progress(type, false);
                     if (response['dir_content']) {
                         $('#modal-mkdir').modal('hide');
                         fill_table(type, response['dir_content']);
@@ -99,7 +103,7 @@
         $('.tasks .rename').click(function (e) {
             e.preventDefault();
             var wrapper = $(this).parents('.dirs-column'),
-                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                type = wrapper.attr('data-type'),
                 item = $('table tr.info', wrapper);
 
             $('.alerts', wrapper).hide();
@@ -133,11 +137,14 @@
                     new_item_name: $('#tasks-rename-name', $(this)).val()
                 };
 
+                $('#modal-rename').modal('hide');
+                $('#tasks-rename').trigger('reset');
+
+                progress(type, true);
                 $.post('/ftp-client/tasks/', request, function (response) {
+                    progress(type, false);
                     if (response['dir_content']) {
-                        $('#modal-rename').modal('hide');
                         fill_table(type, response['dir_content']);
-                        $('#tasks-rename').trigger('reset');
                     }
                 }, 'json');
             });
@@ -147,7 +154,7 @@
         $('.tasks .chmod').click(function (e) {
             e.preventDefault();
             var wrapper = $(this).parents('.dirs-column'),
-                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                type = wrapper.attr('data-type'),
                 items = $('table tr.info', wrapper);
 
             $('.alerts', wrapper).hide();
@@ -165,13 +172,13 @@
                 path.push($(this).attr('data-full-path'));
             });
 
+            $('#modal-chmod').modal();
+
             var request = {
                 type: type,
                 task: 'chmod',
                 'items[]': path
             };
-
-            $('#modal-chmod').modal();
 
             $('#tasks-chmod').off('submit').on('submit', '', function (e) {
                 e.preventDefault();
@@ -201,11 +208,14 @@
 
                 request['permission'] = String(owner) + String(group) + String(other);
 
+                $('#modal-chmod').modal('hide');
+                $('#tasks-chmod input[type="checkbox"]').prop('checked', false);
+
+                progress(type, true);
                 $.post('/ftp-client/tasks/', request, function (response) {
+                    progress(type, false);
                     if (response['dir_content']) {
-                        $('#modal-chmod').modal('hide');
                         fill_table(type, response['dir_content']);
-                        $('#tasks-chmod input[type="checkbox"]').prop('checked', false);
                     }
                 }, 'json');
             });
@@ -215,7 +225,7 @@
         $('.tasks .upload').click(function (e) {
             e.preventDefault();
             var wrapper = $(this).parents('.dirs-column'),
-                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                type = wrapper.attr('data-type'),
                 items = $('table tr.info', wrapper);
 
             if(!items.length){
@@ -244,13 +254,14 @@
                 'items[]': path
             };
 
+            //Change `type` value
+            type = (type == 'local') ? 'remote' : 'local';
+
+            progress(type, true)
             $.post('/ftp-client/tasks/', request, function (response) {
+                progress(type, false);
                 if (response['dir_content']) {
-                    if (type == 'local') {
-                        fill_table('remote', response['dir_content']);
-                    } else {
-                        fill_table('local', response['dir_content']);
-                    }
+                    fill_table(type, response['dir_content']);
                 }
             }, 'json');
         });
@@ -259,7 +270,7 @@
         $('.tasks .remove').click(function (e) {
             e.preventDefault();
             var wrapper = $(this).parents('.dirs-column'),
-                type = wrapper.attr('class').replace(/.+[^(local|remote)]/g, ''),
+                type = wrapper.attr('data-type'),
                 items = $('table tr.info', wrapper);
 
             $('.alerts', wrapper).hide();
@@ -283,8 +294,9 @@
                 'items[]': path
             };
 
-
+            progress(type, true);
             $.post('/ftp-client/tasks/', request, function (response) {
+                progress(type, false);
                 if (response['dir_content']) {
                     fill_table(type, response['dir_content']);
                 }
@@ -315,6 +327,14 @@
 
             if(cur_path !== undefined) {
                 $('.dirs-column.' + type + ' .panel-heading .directory').text(cur_path);
+            }
+        }
+
+        function progress(type, progress){
+            if(progress){
+                $('.dirs-column.' + type).addClass('in-progress');
+            }else{
+                $('.dirs-column.' + type).removeClass('in-progress');
             }
         }
     });

@@ -37,7 +37,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-lg-6 dirs-column local">
+        <div class="col-lg-6 dirs-column local" data-type="local">
             <div class="alerts">
                 <div class="alert alert-danger" role="alert">
                     <button class="close" aria-label="Close">
@@ -65,6 +65,7 @@
                         <a class="remove" href="#" title="Remove">
                             <span class="glyphicon glyphicon-trash"></span>
                         </a>
+                        <div class="tasks-disable"></div>
                     </div>
                 </div>
                 <div class="panel-body">
@@ -90,10 +91,15 @@
                             </tr>
                         {% endfor %}
                     </table>
+                    <div class="progress-wrapper">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped active" role="progressbar"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6 dirs-column remote">
+        <div class="col-lg-6 dirs-column remote" data-type="remote">
             <div class="alerts">
                 <div class="alert alert-danger" role="alert">
                     <button class="close" aria-label="Close">
@@ -105,7 +111,6 @@
             <div class="panel panel-info">
                 <div class="panel-heading">
                     Remote directory: <span class="directory"></span>
-
                     <div class="tasks pull-right">
                         <a class="mkdir" href="#" title="Create folder">
                             <span class="glyphicon glyphicon-folder-open"></span>
@@ -122,6 +127,7 @@
                         <a class="remove" href="#" title="Remove">
                             <span class="glyphicon glyphicon-trash"></span>
                         </a>
+                        <div class="tasks-disable"></div>
                     </div>
                 </div>
                 <div class="panel-body">
@@ -133,19 +139,11 @@
                             <th>Permission</th>
                         </tr>
                     </table>
-                    <div class="progress">
-                        <div class="progress-bar progress-bar-striped active" role="progressbar"></div>
+                    <div class="progress-wrapper">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped active" role="progressbar"></div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="panel panel-info">
-                <div class="panel-heading">Upload progress:</div>
-                <div class="panel-body">
-                    SOME CONTENT
                 </div>
             </div>
         </div>
