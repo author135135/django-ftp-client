@@ -8,4 +8,4 @@
             'ftp_client'
         )
 
-3.  Add to project urls.py code `url(r'^ftp-client/', include('ftp_client.urls', namespace='ftp_client'))`
+3.  Include to project urlconf `url(r'^ftp-client/', include('ftp_client.urls', namespace='ftp_client'))`
